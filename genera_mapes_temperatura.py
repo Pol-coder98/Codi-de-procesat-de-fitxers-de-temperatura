@@ -1059,6 +1059,11 @@ def main():
         action="store_true",
         help="Fes servir la mateixa escala de colors per a tots els fitxers processats",
     )
+    parser.add_argument(
+        "--no-html",
+        action="store_true",
+        help="No generar els fitxers HTML interactius",
+    )
     args = parser.parse_args()
 
     carpeta_csv = Path(args.entrada)
@@ -1068,7 +1073,8 @@ def main():
     carpeta_dades = carpeta_sortida / "Dades CSV"
 
     carpeta_sortida.mkdir(parents=True, exist_ok=True)
-    carpeta_html.mkdir(parents=True, exist_ok=True)
+    if not args.no_html:
+        carpeta_html.mkdir(parents=True, exist_ok=True)
     carpeta_imatges.mkdir(parents=True, exist_ok=True)
     carpeta_dades.mkdir(parents=True, exist_ok=True)
 
@@ -1120,7 +1126,9 @@ def main():
     )
     maxims_csv = guardar_serie_maxims_csv(serie_maxims, carpeta_dades)
     maxims_suavitzats_csv = guardar_serie_suavitzada_csv(serie_maxims, carpeta_dades)
-    grafica_html = generar_html_grafica_maxims(serie_maxims, carpeta_html)
+    grafica_html = None
+    if not args.no_html:
+        grafica_html = generar_html_grafica_maxims(serie_maxims, carpeta_html)
     grafica_png = guardar_png_grafica_maxims(serie_maxims, carpeta_imatges)
 
     resum_sortida = carpeta_dades / "resum_temperatures.csv"
@@ -1148,7 +1156,9 @@ def main():
                 amplada, alcada = mida(temp)
 
                 png_sortida = guardar_png(temp, nom, carpeta_imatges, args.cmap, vmin=vmin, vmax=vmax)
-                html_sortida = generar_html_interactiu(temp, nom, carpeta_html, args.cmap, vmin=vmin, vmax=vmax)
+                html_sortida = ""
+                if not args.no_html:
+                    html_sortida = generar_html_interactiu(temp, nom, carpeta_html, args.cmap, vmin=vmin, vmax=vmax)
 
                 writer.writerow(
                     [
@@ -1165,19 +1175,27 @@ def main():
                     ]
                 )
 
-                print(
-                    f"{nom}: Min={t_min:.2f} C Max={t_max:.2f} C "
-                    f"Mitjana={t_avg:.2f} C -> {html_sortida}"
-                )
+                if args.no_html:
+                    print(
+                        f"{nom}: Min={t_min:.2f} C Max={t_max:.2f} C "
+                        f"Mitjana={t_avg:.2f} C -> {ruta_relativa(png_sortida, carpeta_sortida) if png_sortida else ''}"
+                    )
+                else:
+                    print(
+                        f"{nom}: Min={t_min:.2f} C Max={t_max:.2f} C "
+                        f"Mitjana={t_avg:.2f} C -> {html_sortida}"
+                    )
             except Exception as e:
                 print(f"Error generant mapa per {fitxer}: {e}")
 
     print(f"Serie de maxims: {maxims_csv}")
     print(f"Serie de maxims suavitzats: {maxims_suavitzats_csv}")
-    print(f"Grafica interactiva de maxims: {grafica_html}")
+    if not args.no_html:
+        print(f"Grafica interactiva de maxims: {grafica_html}")
     if grafica_png:
         print(f"Grafica PNG de maxims: {grafica_png}")
-    print(f"HTML per obrir al navegador: {carpeta_html.resolve()}")
+    if not args.no_html:
+        print(f"HTML per obrir al navegador: {carpeta_html.resolve()}")
     print(f"Imatges PNG: {carpeta_imatges.resolve()}")
     print(f"Dades CSV: {carpeta_dades.resolve()}")
     print(f"Proces finalitzat. Resultats a: {carpeta_sortida.resolve()}")
