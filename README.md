@@ -1,72 +1,61 @@
-# Processament de Mapes Tèrmics i Sèries Temporals (`Python_temperatura.py`)
+# Generador de Mapes Tèrmics i Gràfiques (Python_temperatura.py)
 
-Aquest script en Python està dissenyat per automatitzar l'anàlisi de matrius de temperatura guardades en format CSV (delimitat per punt i coma). Genera mapes gràfics (PNG), visualitzacions interactives per al navegador (HTML) i extreu la tendència de la temperatura màxima al llarg del temps en format de gràfica i taula de dades.
+Aquest script processa imatges tèrmiques exportades en format `.csv` per generar gràfiques d'evolució de temperatura (suavitzades i processades), i recrear els mapes tèrmics en format `PNG` i visualitzadors `HTML` interactius.
 
----
+## Requisits del sistema
 
-## 🚀 Característiques Principals
-
-*   **Generació Automàtica de Mapes:** Transforma matrius numèriques en imatges PNG utilitzant l'escala de colors *Inferno* (o qualsevol altra de *matplotlib*).
-*   **Visor HTML Interactiu:** Crea fitxers HTML autònoms on, al passar el cursor per sobre de cada píxel, es mostra la coordenada exacta i la seva temperatura.
-*   **Anàlisi Temporal de Màxims:** Sincronitza els fitxers cronològicament (detectant la data/hora al nom o per intervals) i genera una gràfica evolutiva dels punts més calents.
-*   **Suavitzat de Dades i Filtre de Soroll:** Aplica un filtre de mitjana mòbil i eliminació de pics anòmals per netejar les gràfiques temporals.
-*   **Sistema de Cache Integrat:** Detecta si un fitxer ja s'ha processat prèviament mitjançant un hash SHA-256 per estalviar temps en futures rutes.
-
----
-
-## 🎯 Regla de Retall de Cerca Automàtica (Nou)
-
-L'script incorpora una lògica intel·ligent durant la **Fase 1** d'anàlisi per restringir la zona on es busca la temperatura màxima segons el nom del fitxer:
-
-*   📂 **Fitxers que contenen `MECO` al nom:** La cerca de la temperatura màxima queda limitada exclusivament a la zona superior esquerra del component:
-    *   **Eix X:** De l'origen al **43%** de l'amplada total `[0, 43]`.
-    *   **Eix Y:** De l'origen al **80%** de l'alçada total `[0, 80]`.
-*   🌐 **Resta de fitxers:** S'analitza de manera estàndard el **100%** de l'àrea disponible.
-
-> ⚠️ *Nota: Aquesta regla s'aplica automàticament sobre la matriu de treball (estigui o no retallada prèviament pels arguments globals) i serveix per evitar falsos positius d'elements externs en els informes de màxims.*
-
----
-
-## 🛠️ Requisits i Dependències
-
-L'script pot funcionar en mode bàsic sense llibreries externes, però per disposar del 100% de les seves funcions es recomana instal·lar:
-
+Perquè l'script funcioni correctament necessites instal·lar els següents paquets de Python:
 ```bash
-pip install numpy pillow matplotlib
-💻 Com s'Utilitza
-Per defecte, només cal col·locar els fitxers .csv dins de la carpeta Entrada fitxers (al costat de l'script) i executar:
+pip install matplotlib Pillow numpy
+Funcionament general
+L'script busca tots els arxius .csv ubicats a la carpeta d'entrada Entrada fitxers. Per cada execució:
+
+Analitzarà la matriu de temperatures de cada imatge.
+
+Cercarà el pic de temperatura dins de la imatge descartant soroll gràcies al sistema de retall per zones.
+
+Crearà una gràfica amb l'evolució temporal de les temperatures.
+
+Generarà exportacions individuals visuals.
+
+Tot el contingut processat es desarà automàticament en una subcarpeta nova anomenada Mapes termics / Resultats N per no sobreescriure dades anteriors.
+
+Sistema de Coordenades (Molt Important)
+En processament d'imatge i matrius, l'origen de coordenades no és el clàssic cartesià, sinó que s'ubica a DALT A L'ESQUERRA (0, 0):
+
+Eix X (Horitzontal): 0% és el límit ESQUERRE i 100% és el límit DRET.
+
+Eix Y (Vertical): 0% és el límit SUPERIOR i 100% és el límit INFERIOR.
+
+Regles Automàtiques de Retall
+L'script està programat per ignorar automàticament certes parts de la imatge per evitar llegir zones calentes no desitjades (ex. focus superiors). Això es fa directament des de la funció main().
+
+Peces MECO:
+Com que presenten focus de calor a la zona dreta i superior, l'script buscarà el punt màxim de temperatura només dins del següent marge operatiu:
+
+X = [0, 55] (Descarta el 45% dret de la imatge).
+
+Y = [20, 100] (Descarta el 20% de dalt de la imatge).
+
+Altres peces:
+S'analitzen al 100%, és a dir: X = [0, 100] i Y = [0, 100].
+
+Arguments de Consola (Opcional)
+Si executes l'script des del Terminal/CMD, pots personalitzar-ne el comportament:
+
+--entrada [ruta]: Especifica una carpeta d'entrada diferent per als CSV.
+
+--sortida [ruta]: Especifica una carpeta de destí diferent.
+
+--html: Genera els mapes interactius individuals de cada fotografia.
+
+--nomes-grafica: Ignora la generació dels PNG individuals (molt útil per estalviar temps si només vols veure la gràfica d'evolució d'un gran volum de fitxers).
+
+--reutilitzar: Evita crear carpetes Resultats N i sobreescriu la darrera carpeta generada.
+
+--interval-segons [valor]: Força un interval manual de segons per ordenar temporalment les fotografies si els fitxers no tenen timestamp al nom.
+
+Exemple d'ús:
 
 Bash
-python Python_temperatura.py
-Arguments de l'Línia de Comandes més Comuns:
---entrada "ruta": Especifica una carpeta d'origen diferent per als CSV.
-
---sortida "ruta": Especifica on desar els resultats.
-
---html: Activa la generació de mapes interactius HTML per a cada imatge i la gràfica web interactiva.
-
---nomes-grafica: Omet la creació de les imatges individuals (PNG/HTML) per processar centenars de fitxers en pocs segons, generant només els resums i les gràfiques.
-
---reutilitzar: En lloc de crear una carpeta nova tipus Resultats 3, sobreescriu els fitxers de l'última carpeta generada (ideal per a proves).
-
---suavitzat-punts 21: Modifica la finestra del filtre mòbil (per defecte 21 punts).
-
---llindar-pic 1.5: Canvia la tolerància en graus per descartar un pic com a soroll.
-
-📁 Estructura de Sortida
-Cada vegada que executes l'script (tret que usis --reutilitzar), es crea una nova carpeta numerada (Resultats 1, Resultats 2, etc.) per protegir les teves dades prèvies:
-
-Plaintext
-Mapes termics/
-└── Resultats N/
-    ├── .cache_processat
-    ├── Imatges PNG/
-    │   ├── grafica_maxims_temperatura.png   <-- Evolució temporal visual
-    │   └── [Nom_Fitxer].png                 <-- Mapes tèrmics individuals
-    ├── HTML navegador/                      <-- (Només amb --html)
-    │   ├── grafica_maxims_temperatura.html  <-- Gràfica interactiva amb taula
-    │   └── [Nom_Fitxer].html                <-- Visor de píxels interactiu
-    └── Dades CSV/                           
-        ├── maxims_temperatura.csv           <-- Coordenades i màxims en brut
-        ├── maxims_temperatura_suavitzats.csv<-- Màxims filtrats per a informes
-        └── resum_temperatures.csv           <-- Mides i estadístiques globals
+python Python_temperatura.py --html --nomes-grafica --reutilitzar
