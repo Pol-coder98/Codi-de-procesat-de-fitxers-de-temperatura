@@ -680,9 +680,6 @@ def generar_html_grafica_maxims(serie, carpeta_sortida):
         llegenda_items.append(
             f'<div class="llegenda-item"><div class="llegenda-item-dot" style="background-color: {color};"></div><span>{html.escape(etiqueta)}</span></div>'
         )
-    llegenda_items.append(
-        '<div class="llegenda-item"><div class="llegenda-item-line" style="background-color: #555;"></div><span>Linia suavitzada del mateix color</span></div>'
-    )
     llegenda_html = "".join(llegenda_items)
 
     document = f"""<!doctype html>
@@ -708,7 +705,7 @@ def generar_html_grafica_maxims(serie, carpeta_sortida):
     th {{ background: #ece9e1; }}
     .llegenda {{ display: flex; gap: 20px; margin: 14px 0; font-size: 13px; flex-wrap: wrap; }}
     .llegenda-item {{ display: flex; align-items: center; gap: 6px; }}
-    .llegenda-item-dot {{ width: 12px; height: 12px; border-radius: 50%; }}
+    .llegenda-item-dot {{ width: 12px; height: 12px; border-radius: 60%; }}
     .llegenda-item-line {{ width: 20px; height: 2px; }}
     @media (max-width: 760px) {{ body {{ padding: 14px; }} .eina {{ grid-template-columns: 1fr; }} canvas {{ height: 380px; }} .lectura {{ position: static; }} }}
   </style>
@@ -717,7 +714,7 @@ def generar_html_grafica_maxims(serie, carpeta_sortida):
   <main>
     <h1>Temperatura maxima en funcio del temps</h1>
     <div class="resum">
-      <span id="num-punts"></span>
+      <span id="num"></span>
       <span id="rang-temp"></span>
     </div>
 
@@ -728,7 +725,7 @@ def generar_html_grafica_maxims(serie, carpeta_sortida):
     <div class="eina">
       <canvas id="grafica" aria-label="Grafica de temperatura maxima en funcio del temps"></canvas>
       <aside class="lectura">
-        <strong>Punt seleccionat</strong>
+        <!-- Text "Punt seleccionat" eliminat aquí -->
         <div>Temps: <span id="temps">-</span></div>
         <div class="valor"><span id="temp">Mou el cursor</span></div>
         <div>Fitxer: <span id="fitxer">-</span></div>
@@ -925,7 +922,7 @@ def generar_html_grafica_maxims(serie, carpeta_sortida):
       `).join("");
     }}
 
-    document.getElementById("num-punts").textContent = `${{serie.length}} imatges processades`;
+    document.getElementById("num").textContent = `${{serie.length}} imatges processades`;
     document.getElementById("rang-temp").textContent = `Maxims: ${{Math.min(...serie.map(p => p.max_C)).toFixed(2)}} - ${{Math.max(...serie.map(p => p.max_C)).toFixed(2)}} C`;
 
     canvas.addEventListener("mousemove", seleccionarMesProper);
@@ -980,8 +977,11 @@ def guardar_png_grafica_maxims(serie, carpeta_sortida):
                 linewidths=0.25,
             )
 
-        ax.plot(x, y_suau, color=color, linewidth=2.4, alpha=0.95, label=f"{etiqueta} suavitzada")
-        ax.plot([], [], marker="o", linestyle="None", color=color, markersize=7, label=f"{etiqueta} punts")
+        ax.plot(x, y_suau, color=color, linewidth=2.4, alpha=0.95)
+        # S'ha modificat aquesta línia per treure " punts"
+        ax.plot([], [], marker="o", linestyle="None", color=color, markersize=7, label=f"{etiqueta}")
+
+    # ... (la resta de la funció continua igual)
 
     x_global = [punt["temps_relatius_minuts"] for punt in serie]
     x_min = min(x_global)
@@ -1112,7 +1112,6 @@ def main():
     parser.add_argument("--suavitzat-punts", type=int, default=21, help="Nombre de punts per suavitzar la grafica.")
     parser.add_argument("--llindar-pic", type=float, default=1.0, help="Diferencia per considerar pic soroll.")
     
-    # CORREGIT: S'usa %% perquè argparse no lenci l'error "badly formed help string"
     parser.add_argument("--interval-x", default="0,100", help="Interval de X per defecte en percentatge (obsolet per la regla automatica)")
     parser.add_argument("--interval-y", default="0,100", help="Interval de Y per defecte en percentatge (obsolet per la regla automatica)")
     parser.add_argument("--nomes-grafica", action="store_true", help="Omet les imatges PNG/HTML i genera nomes el CSV i la grafica.")
@@ -1165,7 +1164,6 @@ def main():
     dades_per_fitxer = []
 
     print(f"\n--- FASE 1: ANALITZANT DADES I CALCULANT GRÀFIQUES ---")
-    print(f"Regla de cerca activa -> MECO: X[0,43] Y[0,80] | Altres: 100%")
     
     for i, fitxer in enumerate(fitxers):
         try:
@@ -1191,10 +1189,11 @@ def main():
             else:
                 temp_treball = temp
 
-            # REGLE AUTOMÀTICA PER DECIDIR L'INTERVAL DE CERCA DE MÀXIMS SEGONS EL NOM
-            if "MECO" in fitxer.name:
-                int_x_file = (0.0, 43.0)
-                int_y_file = (0.0, 80.0)
+            # REGLE AUTOMÀTICA CORREGIDA: Busca "MECO" en el camí sencer del fitxer (case-insensitive)
+            cami_sencer = str(fitxer.resolve()).upper()
+            if "MECO" in cami_sencer:
+                int_x_file = (0.0, 60.0)
+                int_y_file = (20.0, 80.0)
             else:
                 int_x_file = (0.0, 100.0)
                 int_y_file = (0.0, 100.0)
@@ -1318,6 +1317,6 @@ if __name__ == "__main__":
         main()
     except Exception:
         print("\n\n==== HA HAGUT UN ERROR ====\n")
-        traceback.printexc()
+        traceback.print_exc()
         input("\nPrem Enter per tancar...")
         sys.exit(1)
